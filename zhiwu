@@ -1,0 +1,144 @@
+import random
+
+# 设置常量
+ROWS = 5
+COLS = 9
+SUN_FREQUENCY = 10
+PEASHOOTER_COST = 100
+SUNFLOWER_COST = 50
+SUN_VALUES = [25, 50, 75]
+ZOMBIE_HEALTH = 100
+ZOMBIE_DAMAGE = 20
+
+
+class Plant:
+    def __init__(self, name, cost, damage):
+        self.name = name
+        self.cost = cost
+        self.damage = damage
+
+    def __repr__(self):
+        return self.name
+
+
+class Peashooter(Plant):
+    def __init__(self):
+        super().__init__('Peashooter', PEASHOOTER_COST, 10)
+
+
+class Sunflower(Plant):
+    def __init__(self):
+        super().__init__('Sunflower', SUNFLOWER_COST, 0)
+
+
+class Zombie:
+    def __init__(self):
+        self.health = ZOMBIE_HEALTH
+
+    def attack(self):
+        return ZOMBIE_DAMAGE
+
+
+class Cell:
+    def __init__(self):
+        self.content = []
+        self.sun = 0
+
+    def __repr__(self):
+        if self.content:
+            return str(self.content[-1])
+        return ' '
+
+
+class Lawn:
+    def __init__(self):
+        self.grid = [[Cell() for c in range(COLS)] for r in range(ROWS)]
+        self.sun = 50
+        self.score = 0
+
+    def __repr__(self):
+        rows = []
+        for row in self.grid:
+            row_str = "|".join([str(cell) for cell in row])
+            rows.append(row_str)
+        return "\n".join(rows)
+
+    def add_plant(self, plant, row, col):
+        if self.grid[row][col].sun < plant.cost:
+            print(f"Not enough suns. Need {plant.cost}, have {self.grid[row][col].sun}")
+            return
+        
+        self.grid[row][col].content.append(plant())
+        self.grid[row][col].sun -= plant.cost
+
+    def process_turn(self):
+        # Generate suns with 1/SUN_FREQUENCY probability
+        if random.randint(0, SUN_FREQUENCY) == 0:
+            self.grid[random.randint(0, ROWS - 1)][random.randint(0, COLS - 1)].sun += random.choice(SUN_VALUES)
+
+        # Move zombies and attack plants
+        for row in range(ROWS):
+            for cell in self.grid[row]:
+                if isinstance(cell.content[-1], Zombie):
+                    zombie = cell.content[-1]
+                    col = cell_index(self.grid[row], cell)
+                    if col == 0:
+                        print("Game over!")
+                        exit()
+                    
+                    plant = self.grid[row][col - 1].content[-1] if col > 0 else None
+                    if plant:
+                        plant.health -= zombie.attack()
+                        if plant.health <= 0:
+                            self.grid[row][col - 1].content.pop()
+                            self.score += plant.cost // 2 + 50
+
+        # Attack zombies and remove dead ones
+        for row in range(ROWS):
+            for cell in self.grid[row]:
+                if cell.content and isinstance(cell.content[-1], Plant):
+                    plant = cell.content[-1]
+                    col = cell_index(self.grid[row], cell)
+                    zombie = self.grid[row][col + 1].content[-1] if col < COLS - 1 and self.grid[row][col + 1].content and isinstance(self.grid[row][col + 1].content[-1], Zombie) else None
+                    if zombie:
+                        zombie.health -= plant.damage
+                        if zombie.health <= 0:
+                            self.grid[row][col + 1].content.pop()
+
+    def print_game_over(self):
+        print(f"Game over! Your score is {self.score}")
+
+def cell_index(row, cell):
+    return row.index(cell)
+
+if __name__ == '__main__':
+    lawn = Lawn()
+    while True:
+        # Print the current state of the lawn
+        print(lawn)
+
+        # Process user input
+        command = input("Enter a command (plant|end): ").strip()
+        if command == "end":
+            break
+
+        if command.startswith("plant"):
+            parts = command.split("|")
+            if len(parts) != 3:
+                print("Invalid command. Format: plant|row|col")
+                continue
+            row, col = int(parts[1]), int(parts[2])
+            plant_name = input("Enter the plant name (peashooter|sunflower): ").strip()
+            if plant_name == "peashooter":
+                lawn.add_plant(Peashooter, row, col)
+            elif plant_name == "sunflower":
+                lawn.add_plant(Sunflower, row, col)
+            else:
+                print("Invalid plant name")
+                continue
+
+        # Process the turn
+        lawn.process_turn()
+
+    # Print the final score
+    lawn.print_game_over()
