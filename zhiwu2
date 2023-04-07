@@ -1,0 +1,175 @@
+import random
+
+# 设置常量
+ZOMBIE_TYPES = ['Normal', 'Conehead', 'Buckethead']
+PLANT_TYPES = ['Peashooter', 'Sunflower', 'CherryBomb', 'WallNut']
+SUN_FREQUENCY = 10
+
+
+class Plant:
+    def __init__(self, name, cost, health, damage):
+        self.name = name
+        self.cost = cost
+        self.health = health
+        self.damage = damage
+
+    def __repr__(self):
+        return self.name
+
+
+class Peashooter(Plant):
+    def __init__(self):
+        super().__init__('Peashooter', 100, 50, 10)
+
+
+class Sunflower(Plant):
+    def __init__(self):
+        super().__init__('Sunflower', 50, 40, 0)
+
+
+class CherryBomb(Plant):
+    def __init__(self):
+        super().__init__('Cherry Bomb', 150, 0, 250)
+
+
+class WallNut(Plant):
+    def __init__(self):
+        super().__init__('Wall Nut', 50, 200, 0)
+
+
+class Zombie:
+    def __init__(self, ztype):
+        self.ztype = ztype
+        self.health = 100
+        self.speed = 1
+        self.damage = 10
+
+        # 根据僵尸类型调整属性
+        if ztype == 'Conehead':
+            self.health = 150
+        elif ztype == 'Buckethead':
+            self.health = 200
+            self.damage = 20
+
+    def attack(self):
+        return self.damage
+
+
+class Cell:
+    def __init__(self):
+        self.content = []
+        self.sun = 0
+
+    def __repr__(self):
+        if self.content:
+            return str(self.content[-1])
+        return ' '
+
+
+class Lawn:
+    def __init__(self):
+        self.grid = [[Cell() for c in range(9)] for r in range(5)]
+        self.sun = 50
+        self.score = 0
+
+    def __repr__(self):
+        rows = []
+        for row in self.grid:
+            row_str = "|".join([str(cell) for cell in row])
+            rows.append(row_str)
+        return "\n".join(rows)
+
+    def add_plant(self, plant_type, row, col):
+        # 检查阳光是否充足
+        if self.grid[row][col].sun < plant_type.cost:
+            print(f"Not enough suns. Need {plant_type.cost}, have {self.grid[row][col].sun}")
+            return
+        
+        # 在网格中添加植物（如果有足够的阳光）
+        self.grid[row][col].content.append(plant_type)
+        self.grid[row][col].sun -= plant_type.cost
+
+    def process_turn(self):
+        # 每次回合随机生成阳光
+        if random.randint(0, SUN_FREQUENCY) == 0:
+            self.grid[random.randint(0, 4)][random.randint(0, 8)].sun += random.choice([25, 50, 75])
+
+        # 处理所有植物和僵尸的攻击和防御
+        for row in range(5):
+            for col in range(9):
+                cell = self.grid[row][col]
+                if isinstance(cell.content, Plant):
+                    plant = cell.content
+                    # 处理僵尸攻击植物
+                    if col < 8 and isinstance(self.grid[row][col + 1].content, Zombie):
+                        zombie = self.grid[row][col + 1].content
+                        plant.health -= zombie.attack()
+                        if plant.health <= 0:
+                            self.score += plant.cost // 2 + 50
+                            cell.content = None
+                    # 处理植物攻击僵尸
+                    if col > 0 and cell.content and isinstance(self.grid[row][col - 1].content, Zombie):
+                        zombie = self.grid[row][col - 1].content
+                        zombie.health -= plant.damage
+                        if zombie.health <= 0:
+                            self.score += 200
+                            self.grid[row][col - 1].content = None
+
+                elif isinstance(cell.content, Zombie):
+                    zombie = cell.content
+                    # 处理僵尸移动和攻击
+                    ifcol > 0 and not self.grid[row][col - 1].content:
+                    # 移动到左边的空格
+                    self.grid[row][col - 1].content = zombie
+                    self.grid[row][col].content = None
+                elif col == 0:
+                    # 已经到达左边界，游戏结束
+                    print("Game over!")
+                    exit()
+                elif col < 8 and isinstance(self.grid[row][col + 1].content, Plant):
+                    # 攻击右侧的植物
+                    plant = self.grid[row][col + 1].content
+                    plant.health -= zombie.attack()
+                    if plant.health <= 0:
+                        self.score += plant.cost // 2 + 50
+                        self.grid[row][col + 1].content = None
+
+def print_game_over(self):
+    print(f"Game over! Your score is {self.score}")
+if name == "main":
+lawn = Lawn()
+while True:
+    # 打印当前的草坪状态
+    print(lawn)
+
+    # 处理用户输入命令
+    command = input("Enter a command (plant|end): ")
+    if command == "end":
+        break
+
+    if command.startswith("plant"):
+        # 解析植物放置命令（格式：plant|<row>|<col>|<type>）
+        parts = command.split("|")
+        if len(parts) != 4:
+            print("Invalid command. Format: plant|row|col|type")
+            continue
+        row, col, plant_type = int(parts[1]), int(parts[2]), parts[3]
+        if plant_type not in PLANT_TYPES:
+            print(f"Invalid plant type. Available types are: {', '.join(PLANT_TYPES)}")
+            continue
+
+        # 根据命令放置植物
+        if plant_type == "Peashooter":
+            lawn.add_plant(Peashooter(), row, col)
+        elif plant_type == "Sunflower":
+            lawn.add_plant(Sunflower(), row, col)
+        elif plant_type == "CherryBomb":
+            lawn.add_plant(CherryBomb(), row, col)
+        elif plant_type == "WallNut":
+            lawn.add_plant(WallNut(), row, col)
+
+    # 处理回合
+    lawn.process_turn()
+
+# 打印最终得分
+lawn.print_game_over()
